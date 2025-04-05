@@ -131,7 +131,7 @@ class ISLTransformer(VideoTransformerBase):
         self.last_prediction_time = 0
         self.current_sentence = st.session_state.get("sentence", "")
 
-    def transform(self, frame: av.VideoFrame) -> av.VideoFrame:
+    def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
         img = frame.to_ndarray(format="bgr24")
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         results = self.hands.process(img_rgb)
@@ -197,6 +197,7 @@ if "current_sentence" in st.session_state:
 st.markdown("---")
 st.subheader("🧾 Reference Image")
 st.image("Assets/Reference.png", caption="Use this as a guide for signs", use_container_width=True)
+
 
 
 
