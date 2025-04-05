@@ -1,5 +1,3 @@
-#For Deployment
-
 import streamlit as st
 import joblib
 import os
@@ -231,7 +229,7 @@ st.image("Assets/Reference.png", caption="Use this as a guide for signs", use_co
 
 
 
-#For local
+
 
 
 # import streamlit as st
