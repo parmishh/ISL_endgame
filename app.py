@@ -128,22 +128,23 @@ class ISLTransformer(VideoTransformerBase):
     def __init__(self):
         self.model, _ = load_model(model_name)
         self.hands = mp_hands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.7)
+        self.last_prediction_time = 0
+        self.current_sentence = st.session_state.get("sentence", "")
 
     def transform(self, frame: av.VideoFrame) -> av.VideoFrame:
         img = frame.to_ndarray(format="bgr24")
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         results = self.hands.process(img_rgb)
 
+        display_text = "No hands detected."
         prediction = ""
-        display_text = ""
 
         if results.multi_hand_landmarks:
-            x1, y1, x2, y2 = get_combined_hand_box(img, results.multi_hand_landmarks)
-            input_data = extract_landmarks(results)
+            try:
+                x1, y1, x2, y2 = get_combined_hand_box(img, results.multi_hand_landmarks)
+                input_data = extract_landmarks(results)
 
-            if input_data.shape[1] == NUM_LANDMARKS:
-                try:
-                    raw_pred = None
+                if input_data.shape[1] == NUM_LANDMARKS:
                     if model_name.endswith(".h5"):
                         raw_pred = np.argmax(self.model.predict(input_data), axis=1)[0]
                     else:
@@ -154,27 +155,30 @@ class ISLTransformer(VideoTransformerBase):
                     if isinstance(raw_pred, (int, np.integer)) and raw_pred < len(CLASS_LABELS):
                         prediction = CLASS_LABELS[raw_pred]
                         current_time = time.time()
-                        if current_time - st.session_state["last_append_time"] > 3:
-                            st.session_state["sentence"] += prediction
-                            st.session_state["last_append_time"] = current_time
+                        if current_time - self.last_prediction_time > 3:
+                            self.current_sentence += prediction
+                            self.last_prediction_time = current_time
 
                         display_text = f"Prediction: {prediction}"
                         cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
                     else:
                         display_text = f"Unknown class ({raw_pred})"
-                except Exception as e:
-                    display_text = f"Prediction error: {e}"
-            else:
-                display_text = "Landmark data incomplete."
+                else:
+                    display_text = "Landmark data incomplete."
+
+            except Exception as e:
+                display_text = f"Prediction error: {str(e)}"
 
             for hand_landmarks in results.multi_hand_landmarks:
                 mp_drawing.draw_landmarks(img, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-        else:
-            display_text = "No hands detected."
 
         cv2.putText(img, display_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+
+        # Safely update Streamlit components outside transform
         prediction_placeholder.markdown(f"### 🔤 {display_text}")
-        info_placeholder.markdown(f"### ✏️ Current Sentence: `{st.session_state['sentence']}`")
+        info_placeholder.markdown(f"### ✏️ Current Sentence: `{self.current_sentence}`")
+        st.session_state["sentence"] = self.current_sentence
+
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 st.markdown("🖐️ Show your ISL sign in front of the webcam.")
@@ -188,6 +192,7 @@ webrtc_streamer(
 st.markdown("---")
 st.subheader("🧾 Reference Image")
 st.image("Assets/Reference.png", caption="Use this as a guide for signs", use_container_width=True)
+
 
 
 
