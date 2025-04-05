@@ -174,10 +174,9 @@ class ISLTransformer(VideoTransformerBase):
 
         cv2.putText(img, display_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
 
-        # Safely update Streamlit components outside transform
-        prediction_placeholder.markdown(f"### 🔤 {display_text}")
-        info_placeholder.markdown(f"### ✏️ Current Sentence: `{self.current_sentence}`")
-        st.session_state["sentence"] = self.current_sentence
+        # Save updates in session state
+        st.session_state["last_prediction"] = display_text
+        st.session_state["current_sentence"] = self.current_sentence
 
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
@@ -188,10 +187,17 @@ webrtc_streamer(
     media_stream_constraints={"video": True, "audio": False},
 )
 
+# Display updates in main thread
+if "last_prediction" in st.session_state:
+    prediction_placeholder.markdown(f"### 🔤 {st.session_state['last_prediction']}")
+if "current_sentence" in st.session_state:
+    info_placeholder.markdown(f"### ✏️ Current Sentence: `{st.session_state['current_sentence']}`")
+
 # Reference
 st.markdown("---")
 st.subheader("🧾 Reference Image")
 st.image("Assets/Reference.png", caption="Use this as a guide for signs", use_container_width=True)
+
 
 
 
