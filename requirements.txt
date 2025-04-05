@@ -1,0 +1,12 @@
+streamlit
+joblib
+opencv-python
+numpy
+Pillow
+mediapipe
+pyttsx3
+scikit-learn
+xgboost
+tensorflow
+pandas
+tabulate
